@@ -6,7 +6,22 @@ function streamPipeUntilLimit(readable, writable, limit, callback) {
   }
 
   function onReadable() {
-    var chunk = readable.read();
+    var bytesToRead = limit - offset;
+    if (bytesToRead === 0) {
+      readable.removeListener('readable', onReadable);
+      readable.removeListener('end', onEnd);
+      return callback(null, offset + bytesToRead);
+    } else if (bytesToRead < 0) {
+      readable.removeListener('readable', onReadable);
+      readable.removeListener('end', onEnd);
+      return callback(new Error('can not read less than 0 bytes'));
+    }
+
+    if (bytesToRead > 1048576) {
+      bytesToRead = 1048576;
+    }
+
+    var chunk = readable.read(bytesToRead);
     if (chunk === null) {
       return;
     }
